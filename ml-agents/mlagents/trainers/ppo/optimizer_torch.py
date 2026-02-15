@@ -19,6 +19,15 @@ from mlagents.trainers.torch_entities.action_log_probs import ActionLogProbs
 from mlagents.trainers.torch_entities.utils import ModelUtils
 from mlagents.trainers.trajectory import ObsUtil
 
+# Try to import CustomCritic, fall back to ValueNetwork if not available
+try:
+    from Custom.networks import CustomCritic
+    CUSTOM_CRITIC_AVAILABLE = True
+    print("[PPO Optimizer] CustomCritic loaded successfully")
+except ImportError as e:
+    CUSTOM_CRITIC_AVAILABLE = False
+    print(f"[PPO Optimizer] CustomCritic not available, using ValueNetwork: {e}")
+
 
 @attr.s(auto_attribs=True)
 class PPOSettings(OnPolicyHyperparamSettings):
@@ -55,11 +64,18 @@ class TorchPPOOptimizer(TorchOptimizer):
         if self.hyperparameters.shared_critic:
             self._critic = policy.actor
         else:
-            self._critic = ValueNetwork(
-                reward_signal_names,
-                policy.behavior_spec.observation_specs,
-                network_settings=trainer_settings.network_settings,
-            )
+            if CUSTOM_CRITIC_AVAILABLE:
+                self._critic = CustomCritic(
+                    reward_signal_names,
+                    policy.behavior_spec.observation_specs,
+                    network_settings=trainer_settings.network_settings,
+                )
+            else:
+                self._critic = ValueNetwork(
+                    reward_signal_names,
+                    policy.behavior_spec.observation_specs,
+                    network_settings=trainer_settings.network_settings,
+                )
             self._critic.to(default_device())
             params += list(self._critic.parameters())
 

@@ -53,10 +53,10 @@ class TorchPolicy(Policy):
             **actor_kwargs,
         )
 
-        # Save the m_size needed for export
-        self._export_m_size = self.m_size
         # m_size needed for training is determined by network, not trainer settings
         self.m_size = self.actor.memory_size
+        # Save the m_size needed for export (reordered)
+        self._export_m_size = self.m_size
 
         self.actor.to(default_device())
 

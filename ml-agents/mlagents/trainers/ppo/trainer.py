@@ -21,6 +21,15 @@ from mlagents.trainers.settings import TrainerSettings
 
 from mlagents.trainers.torch_entities.networks import SimpleActor, SharedActorCritic
 
+# Try to import custom networks, fall back to defaults if not available
+try:
+    from Custom.networks import CustomActor, CustomActorCritic
+    CUSTOM_NETWORKS_AVAILABLE = True
+    print("[PPO Trainer] Custom networks loaded successfully")
+except ImportError as e:
+    CUSTOM_NETWORKS_AVAILABLE = False
+    print(f"[PPO Trainer] Custom networks not available, using defaults: {e}")
+
 logger = get_logger(__name__)
 
 TRAINER_NAME = "ppo"
@@ -178,7 +187,12 @@ class PPOTrainer(OnPolicyTrainer):
         :param behavior_spec: specifications for policy construction
         :return policy
         """
-        actor_cls: Union[Type[SimpleActor], Type[SharedActorCritic]] = SimpleActor
+        # Select actor class based on custom network availability
+        if CUSTOM_NETWORKS_AVAILABLE:
+            actor_cls = CustomActor
+        else:
+            actor_cls: Union[Type[SimpleActor], Type[SharedActorCritic]] = SimpleActor
+
         actor_kwargs: Dict[str, Any] = {
             "conditional_sigma": False,
             "tanh_squash": False,
@@ -188,7 +202,12 @@ class PPOTrainer(OnPolicyTrainer):
             reward_signal_names = [
                 key.value for key, _ in reward_signal_configs.items()
             ]
-            actor_cls = SharedActorCritic
+            if CUSTOM_NETWORKS_AVAILABLE:
+                actor_cls = CustomActorCritic
+                print("[PPO Trainer] Using CustomActorCritic")
+            else:
+                actor_cls = SharedActorCritic
+                print("[PPO Trainer] Using SharedActorCritic")
             actor_kwargs.update({"stream_names": reward_signal_names})
 
         policy = TorchPolicy(
