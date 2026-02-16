@@ -57,8 +57,10 @@ class TorchModelSaver(BaseModelSaver):
         export_ckpt_path = f"{checkpoint_path}.onnx"
         torch.save(state_dict, f"{checkpoint_path}.pt")
         torch.save(state_dict, os.path.join(self.model_path, DEFAULT_CHECKPOINT_NAME))
-        self.export(checkpoint_path, behavior_name)
-        return export_ckpt_path, [pytorch_ckpt_path]
+        if SerializationSettings.convert_to_onnx:
+            self.export(checkpoint_path, behavior_name)
+            return export_ckpt_path, [pytorch_ckpt_path]
+        return "", [pytorch_ckpt_path]
 
     def export(self, output_filepath: str, behavior_name: str) -> None:
         if self.exporter is not None:
